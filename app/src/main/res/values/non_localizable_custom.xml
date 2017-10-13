@@ -7,7 +7,7 @@
 	<string name="sync_mimetype">vnd.android.cursor.item/org.linphone.profile</string> <!-- Change package, leave .profile at the end. Also change res/xml/contacts.xml ! -->
 	<!--<bool name="orientation_portrait_only">false</bool>-->
 	<!--<bool name="show_statusbar_only_on_dialer">false</bool>-->
-	<!--<bool name="force_use_of_linphone_friends">false</bool>-->
+	<bool name="force_use_of_linphone_friends">false</bool>
 	<bool name="use_linphone_tag">true</bool>
 
 	<!--&lt;!&ndash; Phone numbers &ndash;&gt;-->
@@ -66,8 +66,8 @@
 	<bool name="disable_chat">false</bool>
 	<bool name="disable_chat_message_notification">false</bool>
 	<bool name="disable_chat_send_file">false</bool>
-	<string name="temp_photo_name">linphone-android-photo-temp</string>
-	<string name="temp_photo_name_with_date">linphone-android-photo-%s</string>
+	<!--<string name="temp_photo_name">linphone-android-photo-temp</string>-->
+	<!--<string name="temp_photo_name_with_date">linphone-android-photo-%s</string>-->
 
 	<!--&lt;!&ndash; Contacts &ndash;&gt;-->
 	<!--<bool name="hide_contact_phone_numbers">false</bool>-->
