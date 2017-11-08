@@ -17,7 +17,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 避免在平板电脑上画两次LinphoneActivity
         setContentView(R.layout.activity_main);
         activity = this;
         mHandler = new Handler();
@@ -66,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             while (!LinphoneService.isReady()) {
                 try {
+                    AppLog.d("等待LinphoneService完成");
                     sleep(30);
                 } catch (InterruptedException e) {
                     throw new RuntimeException("waiting thread sleep() has been interrupted");

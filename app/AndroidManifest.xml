@@ -74,7 +74,7 @@
             android:name="org.linphone.LinphoneActivity"
             android:launchMode="singleTask"
             android:screenOrientation="behind"></activity>
-        f
+
         <service
             android:name="org.linphone.LinphoneService"
             android:label="@string/service_name"
