@@ -6,6 +6,8 @@
     <TextView
         android:id="@+id/states_tv"
         android:text="搜索"
+        android:textSize="17dp"
+        android:padding="10dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>
