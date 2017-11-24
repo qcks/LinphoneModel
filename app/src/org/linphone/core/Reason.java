@@ -69,7 +69,7 @@ public class Reason {
 	 */
 	static public Reason TemporarilyUnavailable = new Reason(15,"TemporarilyUnavailable");
 	/**
-	 * Address incomplete
+	 * MyAddress incomplete
 	 */
 	static public Reason AddressIncomplete = new Reason(16,"AddressIncomplete");
 	/**

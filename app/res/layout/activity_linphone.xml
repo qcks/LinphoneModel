@@ -3,11 +3,42 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
+
     <TextView
         android:id="@+id/states_tv"
-        android:text="搜索"
-        android:textSize="17dp"
-        android:padding="10dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="搜索"
+        android:textSize="17dp" />
+
+    <Button
+        android:id="@+id/putThrough_bt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="接通电话" />
+
+    <Button
+        android:id="@+id/callUp_bt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="打电话" />
+
+    <TextView
+        android:id="@+id/message_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="收到消息" />
+
+    <Button
+        android:id="@+id/sendText_bt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="发送文本" />
+
+    <Button
+        android:id="@+id/sendImg_bt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="发送图片" />
 </LinearLayout>

@@ -67,7 +67,7 @@ For overviews, tutorials, examples, guides, and tool documentation, please see:
 </h3>
 User registration is controled by  {@link org.linphone.core.LinphoneProxyConfig } settings.
 <br> Each {@link org.linphone.core.LinphoneProxyConfig } object can be configured with registration informations 
-like {@link org.linphone.core.LinphoneProxyConfig#setProxy proxy address } , {@link org.linphone.core.LinphoneProxyConfig#setIdentity user id}, and so on. 
+like {@link org.linphone.core.LinphoneProxyConfig#setProxy proxy myAddress } , {@link org.linphone.core.LinphoneProxyConfig#setIdentity user id}, and so on.
 <br> A created proxy config using {@link org.linphone.core.LinphoneCoreFactory#createProxyConfig }, once configured, must be added to {@link org.linphone.core.LinphoneCore} using function {@link org.linphone.core.LinphoneCore#addProxyConfig }.
 <br> It is recommended to set a default {@link org.linphone.core.LinphoneProxyConfig proxy config }  using function {@link org.linphone.core.LinphoneCore#setDefaultProxyConfig }. Once done, if {@link org.linphone.core.LinphoneProxyConfig a proxy config } has been configured with attribute {@link org.linphone.core.LinphoneProxyConfig#enableRegister enable register }  , next call to {@link org.linphone.core.LinphoneCore#iterate } triggers a SIP register.  
 <br> Registration status is reported by {@link org.linphone.core.LinphoneCoreListener#registrationState registration listener}.
@@ -89,8 +89,8 @@ like {@link org.linphone.core.LinphoneProxyConfig#setProxy proxy address } , {@l
 	}	
 	// configure proxy entries
 	proxy_cfg.setIdenty(identity); /*set identity with user name and domain*/
-	String server_addr = from.getDomain(); /*extract domain address from identity*/
-	proxy_cfg.setProxy(server_addr); /* we assume domain = proxy server address*/
+	String server_addr = from.getDomain(); /*extract domain myAddress from identity*/
+	proxy_cfg.setProxy(server_addr); /* we assume domain = proxy server myAddress*/
 	proxy_cfg.enableRegister(true); /*activate registration for this proxy config*/
 	
 	lc.addProxyConfig(proxy_cfg); /*add proxy config to linphone core*/

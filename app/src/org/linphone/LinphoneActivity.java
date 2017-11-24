@@ -1,9 +1,16 @@
 package org.linphone;
 
 import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.ExifInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
@@ -14,8 +21,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.gson.Gson;
 
 import org.linphone.Utils.AppLog;
 import org.linphone.core.LinphoneAccountCreator;
@@ -25,14 +35,22 @@ import org.linphone.core.LinphoneCall;
 import org.linphone.core.LinphoneCallParams;
 import org.linphone.core.LinphoneChatMessage;
 import org.linphone.core.LinphoneChatRoom;
+import org.linphone.core.LinphoneContent;
 import org.linphone.core.LinphoneCore;
 import org.linphone.core.LinphoneCoreException;
 import org.linphone.core.LinphoneCoreFactory;
 import org.linphone.core.LinphoneCoreListenerBase;
 import org.linphone.core.LinphoneProxyConfig;
 import org.linphone.mediastream.Log;
+import org.linphone.my.MyAddress;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by qckiss on 2017/8/18.
@@ -44,10 +62,15 @@ public class LinphoneActivity extends AppCompatActivity{
     private LinphoneCoreListenerBase mListener;
     private LinphoneAddress address;
     private LinphoneAccountCreator accountCreator;
-    private boolean alreadyAcceptedOrDeniedCall;
+    private boolean alreadyAcceptedOrDeniedCall = true;
     private LinphoneCall mCall;
 
-    private TextView textView;
+    private TextView mStates_tv;
+    private Button mPutThrough_bt;
+    private Button mCallUp_bt;
+    private TextView mMessage_tv;
+    private Button mSendText_bt,mSendImg_bt;
+
     static final boolean isInstanciated() {
         return instance != null;
     }
@@ -87,7 +110,7 @@ public class LinphoneActivity extends AppCompatActivity{
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_linphone);
-
+        initViews();
 //        mPrefs = LinphonePreferences.instance();
 //        status.enableSideMenu(false);
 
@@ -95,17 +118,12 @@ public class LinphoneActivity extends AppCompatActivity{
         accountCreator.setDomain(getResources().getString(R.string.default_domain));
 //        accountCreator.setListener(this);
         initLogin();
-        textView = (TextView) findViewById(R.id.states_tv);
-        textView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                answer();
-            }
-        });
         mListener = new LinphoneCoreListenerBase(){
             @Override
             public void messageReceived(LinphoneCore lc, LinphoneChatRoom cr, LinphoneChatMessage message) {
 //                displayMissedChats(getUnreadMessageCount());
+                AppLog.i("接受到消息"+message.toString());
+                getChatList();
             }
 
             @Override
@@ -164,6 +182,40 @@ public class LinphoneActivity extends AppCompatActivity{
         instance = this;
     }
 
+    private void initViews() {
+        mStates_tv = (TextView) findViewById(R.id.states_tv);
+        mPutThrough_bt = (Button) findViewById(R.id.putThrough_bt);
+        mCallUp_bt = (Button) findViewById(R.id.callUp_bt);
+        mMessage_tv = (TextView) findViewById(R.id.message_tv);
+        mSendText_bt = (Button) findViewById(R.id.sendText_bt);
+        mSendImg_bt = (Button) findViewById(R.id.sendImg_bt);
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                switch (view.getId()){
+                    case R.id.putThrough_bt:
+                        answer();//接电话
+                        break;
+                    case R.id.callUp_bt://打电话
+                        MyAddress myAddress = new MyAddress();
+                        myAddress.setDisplayedName("");//显示昵称
+                        myAddress.setText("sip:1003@10.0.0.99");
+                        LinphoneManager.getInstance().newOutgoingCall(myAddress);
+                        break;
+                    case R.id.sendText_bt:
+                        sendTextMessage("发文字aaaaa");//发文字
+                        break;
+                    case R.id.sendImg_bt:
+                        answer();//发图片
+                        break;
+                }
+            }
+        };
+        mCallUp_bt.setOnClickListener(listener);
+        mPutThrough_bt.setOnClickListener(listener);
+        mSendText_bt.setOnClickListener(listener);
+        mSendImg_bt.setOnClickListener(listener);
+    }
     @Override
     protected void onResume() {
         super.onResume();
@@ -376,8 +428,8 @@ public class LinphoneActivity extends AppCompatActivity{
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (textView!=null)
-                textView.setText(state);
+                if (mStates_tv!=null)
+                    mStates_tv.setText(state);
             }
         });
     }
@@ -415,7 +467,8 @@ public class LinphoneActivity extends AppCompatActivity{
         }
 //        number.setText(address.asStringUriOnly());
         AppLog.d("得到call name="+address.asStringUriOnly());
-        textView.setText("来自"+contact.getFullName()+"的来电");
+        mStates_tv.setText("来自"+contact.getFullName()+"的来电");
+        alreadyAcceptedOrDeniedCall = false;
     }
     /**
      * 接电话
@@ -446,6 +499,216 @@ public class LinphoneActivity extends AppCompatActivity{
             LinphoneManager.getInstance().routeAudioToReceiver();
             upState("已接通，通话中");
 //            LinphoneActivity.instance().startIncallActivity(mCall);
+        }
+    }
+
+    boolean newChatConversation = true;
+    private void sendTextMessage(String messageToSend) {
+        LinphoneCore lc = LinphoneManager.getLcIfManagerNotDestroyedOrNull();
+        boolean isNetworkReachable = lc == null ? false : lc.isNetworkReachable();
+        LinphoneAddress lAddress = null;
+
+        //Start new conversation in fast chat
+        if(newChatConversation && chatRoom == null) {
+//            String address = searchContactField.getText().toString().toLowerCase(Locale.getDefault());
+            String address = "1003";
+            if (address != null && !address.equals("")) {
+                initChatRoom(address);
+            }
+        }
+        if (chatRoom != null && messageToSend != null && messageToSend.length() > 0 && isNetworkReachable) {
+            LinphoneChatMessage message = chatRoom.createLinphoneChatMessage(messageToSend);
+            chatRoom.sendChatMessage(message);
+            lAddress = chatRoom.getPeerAddress();
+
+            if (LinphoneActivity.isInstanciated()) {
+//                LinphoneActivity.instance().onMessageSent(sipUri, messageToSend);
+            }
+
+            message.setListener(LinphoneManager.getInstance());
+            if (newChatConversation) {
+//                exitNewConversationMode(lAddress.asStringUriOnly());
+                initChatRoom(lAddress.asStringUriOnly());
+            } else {
+//                adapter.addMessage(message);
+            }
+
+            Log.i("Sent message current status: " + message.getStatus());
+        } else if (!isNetworkReachable && LinphoneActivity.isInstanciated()) {
+            LinphoneActivity.instance().displayCustomToast(getString(R.string.error_network_unreachable), Toast.LENGTH_LONG);
+        }
+    }
+
+    private LinphoneChatRoom chatRoom;
+    public void initChatRoom(String sipUri) {
+        LinphoneCore lc = LinphoneManager.getLcIfManagerNotDestroyedOrNull();
+
+        LinphoneAddress lAddress = null;
+        if (sipUri == null) {
+//            contact = null; // Tablet rotation issue
+//            initNewChatConversation();
+        } else {
+            try {
+                lAddress = lc.interpretUrl(sipUri);
+            } catch (Exception e) {
+                //TODO Error popup and quit chat
+            }
+
+            if (lAddress != null) {
+                chatRoom = lc.getChatRoom(lAddress);
+                chatRoom.markAsRead();
+//                LinphoneActivity.instance().updateMissedChatCount();
+////                contact = ContactsManager.getInstance().findContactFromAddress(lAddress);
+//                if (chatRoom != null) {
+//                    searchContactField.setVisibility(View.GONE);
+//                    resultContactsSearch.setVisibility(View.GONE);
+//                    displayChatHeader(lAddress);
+//                    displayMessageList();
+//                }
+            }
+        }
+    }
+
+    public List<String> getChatList() {
+        ArrayList<String> chatList = new ArrayList<String>();
+
+        LinphoneChatRoom[] chats = LinphoneManager.getLc().getChatRooms();
+        List<LinphoneChatRoom> rooms = new ArrayList<LinphoneChatRoom>();
+
+        for (LinphoneChatRoom chatroom : chats) {
+            if (chatroom.getHistorySize() > 0) {
+                rooms.add(chatroom);
+            }
+        }
+
+        if (rooms.size() > 1) {
+            Collections.sort(rooms, new Comparator<LinphoneChatRoom>() {
+                @Override
+                public int compare(LinphoneChatRoom a, LinphoneChatRoom b) {
+                    LinphoneChatMessage[] messagesA = a.getHistory(1);
+                    LinphoneChatMessage[] messagesB = b.getHistory(1);
+                    long atime = messagesA[0].getTime();
+                    long btime = messagesB[0].getTime();
+
+                    if (atime > btime)
+                        return -1;
+                    else if (btime > atime)
+                        return 1;
+                    else
+                        return 0;
+                }
+            });
+        }
+
+        for (LinphoneChatRoom chatroom : rooms) {
+            chatList.add(chatroom.getPeerAddress().asStringUriOnly());
+        }
+        AppLog.d("接收到的消息="+new Gson().toJson(chatList));
+        return chatList;
+    }
+    private void sendImageMessage(String path, int imageSize) {//发送图片消息
+        LinphoneCore lc = LinphoneManager.getLcIfManagerNotDestroyedOrNull();
+        boolean isNetworkReachable = lc == null ? false : lc.isNetworkReachable();
+
+        if(newChatConversation && chatRoom == null) {
+            String address = "1003";
+            if (address != null && !address.equals("")) {
+                initChatRoom(address);
+            }
+        }
+
+        if (chatRoom != null && path != null && path.length() > 0 && isNetworkReachable) {
+            try {
+                Bitmap bm = BitmapFactory.decodeFile(path);
+                if (bm != null) {
+                    FileUploadPrepareTask task = new FileUploadPrepareTask(LinphoneActivity.this, path, imageSize);
+                    task.execute(bm);
+                } else {
+                    Log.e("Error, bitmap factory can't read " + path);
+                }
+            } catch (RuntimeException e) {
+                Log.e("Error, not enough memory to create the bitmap");
+            }
+        } else if (!isNetworkReachable && LinphoneActivity.isInstanciated()) {
+            LinphoneActivity.instance().displayCustomToast(getString(R.string.error_network_unreachable), Toast.LENGTH_LONG);
+        }
+    }
+    private ByteArrayInputStream mUploadingImageStream;
+    private static final int SIZE_MAX = 2048;
+    class FileUploadPrepareTask extends AsyncTask<Bitmap, Void, byte[]> {
+        private String path;
+        private ProgressDialog progressDialog;
+
+        public FileUploadPrepareTask(Context context, String fileToUploadPath, int size) {
+            path = fileToUploadPath;
+
+            progressDialog = new ProgressDialog(context);
+            progressDialog.setIndeterminate(true);
+            progressDialog.setMessage(getString(R.string.processing_image));
+            progressDialog.show();
+        }
+
+        @Override
+        protected byte[] doInBackground(Bitmap... params) {
+            Bitmap bm = params[0];
+
+            if (bm.getWidth() >= bm.getHeight() && bm.getWidth() > SIZE_MAX) {
+                bm = Bitmap.createScaledBitmap(bm, SIZE_MAX, (SIZE_MAX * bm.getHeight()) / bm.getWidth(), false);
+            } else if (bm.getHeight() >= bm.getWidth() && bm.getHeight() > SIZE_MAX) {
+                bm = Bitmap.createScaledBitmap(bm, (SIZE_MAX * bm.getWidth()) / bm.getHeight(), SIZE_MAX, false);
+            }
+
+            // Rotate the bitmap if possible/needed, using EXIF data
+            try {
+                if (path != null) {
+                    ExifInterface exif = new ExifInterface(path);
+                    int pictureOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 0);
+                    Matrix matrix = new Matrix();
+                    if (pictureOrientation == 6) {
+                        matrix.postRotate(90);
+                    } else if (pictureOrientation == 3) {
+                        matrix.postRotate(180);
+                    } else if (pictureOrientation == 8) {
+                        matrix.postRotate(270);
+                    }
+                    bm = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), matrix, true);
+                }
+            } catch (Exception e) {
+                Log.e(e);
+            }
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            String extension = LinphoneUtils.getExtensionFromFileName(path);
+            if (extension != null && extension.toLowerCase(Locale.getDefault()).equals("png")) {
+                bm.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            } else {
+                bm.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+            }
+            byte[] byteArray = stream.toByteArray();
+            return byteArray;
+        }
+
+        @Override
+        protected void onPostExecute(byte[] result) {
+            if (progressDialog != null && progressDialog.isShowing()) {
+                progressDialog.dismiss();
+            }
+            mUploadingImageStream = new ByteArrayInputStream(result);
+
+            String fileName = path.substring(path.lastIndexOf("/") + 1);
+            String extension = LinphoneUtils.getExtensionFromFileName(fileName);
+            LinphoneContent content = LinphoneCoreFactory.instance().createLinphoneContent("image", extension, result, null);
+            content.setName(fileName);
+
+            LinphoneChatMessage message = chatRoom.createFileTransferMessage(content);
+            message.setListener(LinphoneManager.getInstance());
+            message.setAppData(path);
+
+            LinphoneManager.getInstance().setUploadPendingFileMessage(message);
+            LinphoneManager.getInstance().setUploadingImageStream(mUploadingImageStream);
+
+            chatRoom.sendChatMessage(message);
+//            adapter.addMessage(message);
         }
     }
 }
